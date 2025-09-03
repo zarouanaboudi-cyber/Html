@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>استضافة بوتات ديسكورد - مجانية 100%</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <style>
+    body { background: #18191c; color: #eee; }
+    .bot-card { background: #23272a; border-radius: 10px; margin: 10px; padding: 15px; }
+    .avatar { border-radius: 50%; width: 64px; height: 64px; }
+    .form-control, .btn { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <h1 class="mb-4 text-center">استضافة بوتات ديسكورد - مجانية وسريعة</h1>
+    <div class="row">
+      <div class="col-md-6">
+        <form id="addBotForm">
+          <h3>أضف بوت جديد</h3>
+          <input type="text" id="token" class="form-control" placeholder="أدخل توكن البوت..." required>
+          <textarea id="code" class="form-control" rows="10" placeholder="ضع كود بوتك هنا (JS)..." required></textarea>
+          <button type="submit" class="btn btn-success w-100">شغل البوت الآن</button>
+        </form>
+        <div id="addBotStatus"></div>
+      </div>
+      <div class="col-md-6">
+        <h3>بوتاتك المضافة</h3>
+        <div id="botsList" class="d-flex flex-wrap"></div>
+      </div>
+    </div>
+  </div>
+<script>
+async function fetchBots() {
+  const res = await fetch('/api/bots');
+  const bots = await res.json();
+  const list = document.getElementById('botsList');
+  list.innerHTML = '';
+  bots.forEach(bot => {
+    const card = document.createElement('div');
+    card.className = 'bot-card d-flex align-items-center';
+    card.innerHTML = `
+      <img src="https://cdn.discordapp.com/avatars/${bot.user_id}/${bot.avatar}.png" class="avatar mx-2">
+      <div class="flex-grow-1">
+        <div><b>${bot.username}</b> (${bot.user_id})</div>
+        <div>منذ: ${new Date(bot.created_at).toLocaleString()}</div>
+        <a href="/api/bot/${bot.id}/code" class="btn btn-sm btn-warning mt-1">تحميل كود البوت</a>
+        <button class="btn btn-sm btn-danger mt-1" onclick="deleteBot('${bot.id}')">حذف البوت</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+fetchBots();
+
+document.getElementById('addBotForm').onsubmit = async function(e) {
+  e.preventDefault();
+  const token = document.getElementById('token').value.trim();
+  const code = document.getElementById('code').value;
+  const status = document.getElementById('addBotStatus');
+  status.innerHTML = "جاري إضافة البوت...";
+  const res = await fetch('/api/add-bot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, code })
+  });
+  const data = await res.json();
+  if (!data.success) {
+    status.innerHTML = `<span class="text-danger">خطأ: ${data.error || "تعذر إضافة البوت"}</span>`;
+  } else {
+    status.innerHTML = `<span class="text-success">تم إضافة البوت: ${data.username}</span>`;
+    fetchBots();
+  }
+}
+window.deleteBot = async function(id) {
+  if (!confirm("هل أنت متأكد من حذف هذا البوت؟")) return;
+  await fetch('/api/bot/' + id, { method: 'DELETE' });
+  fetchBots();
+}
+</script>
+</body>
+</html>
